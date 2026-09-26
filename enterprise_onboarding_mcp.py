@@ -258,13 +258,25 @@ def provision_aws_cloud_keys(developer_name: str, role: str = "SDE") -> str:
     key_suffix = uuid.uuid4().hex[:12].upper()
     access_key = f"AKIA{key_suffix}"
     secret_key = uuid.uuid4().hex + uuid.uuid4().hex[:8]
+    
+    # Store raw key in session state for inclusion in the encrypted Day-1 welcome email only
+    clean_name = developer_name.lower().strip().replace(" ", ".")
+    if clean_name not in PROVISIONING_STATE:
+        PROVISIONING_STATE[clean_name] = {}
+    PROVISIONING_STATE[clean_name]["aws_access_key_id"] = access_key
+    PROVISIONING_STATE[clean_name]["aws_secret_access_key"] = secret_key
+
+    # Masked for zero-trust UI security (never expose raw secrets in chat/logs)
+    masked_secret = f"{secret_key[:4]}****************************{secret_key[-4:]} [SENT_TO_PRIVATE_WEBMAIL]"
 
     return json.dumps({
         "organization": "ResolveeAI",
         "developer_name": developer_name,
         "role": role,
         "aws_access_key_id": access_key,
-        "aws_secret_access_key": secret_key,
+        "aws_secret_access_key": masked_secret,
+        "security_policy": "RAW_SECRET_REDACTED_FROM_LOGS",
+        "delivery_method": "Delivered securely via one-time encrypted welcome email to corporate inbox",
         "allowed_buckets": ["s3://resolveeai-dev-assets", "s3://staging-build-artifacts"],
         "blocked_buckets": ["s3://resolveeai-prod-billing", "s3://prod-customer-vault"],
         "assigned_policy": "ResolveeAIDevDeveloperPolicy",
@@ -342,6 +354,13 @@ def send_welcome_email(
     state_info = PROVISIONING_STATE.get(clean_name, {})
     temp_pwd = state_info.get("temporary_password", "Resolvee@8892#2026!")
 
+    aws_key = state_info.get("aws_access_key_id", "")
+    aws_secret = state_info.get("aws_secret_access_key", "")
+    aws_creds_block = f"""
+- AWS Developer Access Key ID: {aws_key}
+- AWS Developer Secret Access Key: {aws_secret}
+(Note: Store this secret securely. For zero-trust compliance, it was not logged in public chat/logs)""" if (aws_key and aws_secret) else ""
+
     body = f"""Hello {employee_name},
 
 Welcome to ResolveeAI! Your developer environment and credentials have been verified by our Zero-Trust Onboarding Agent.
@@ -352,7 +371,7 @@ Onboarding Summary:
 - Corporate Webmail Login: https://mail.zoho.in
 - Temporary Password: {temp_pwd} (Please change upon initial login)
 - GitHub Access: ResolveeAI/backend_api (Write) | ResolveeAI/billing_core (Restricted)
-- Cloud IAM: ResolveeAI Dev Environment
+- Cloud IAM: ResolveeAI Dev Environment{aws_creds_block}
 
 Credentials & Setup Details:
 {credentials_summary}
