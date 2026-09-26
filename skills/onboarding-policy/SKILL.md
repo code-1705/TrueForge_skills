@@ -17,7 +17,21 @@ This skill defines the mandatory role mappings, security boundaries, and zero-tr
 
 ---
 
-## 2. Role-to-Access Matrix
+## 2. Mandatory Input Validation Protocol
+
+Before initiating any tool calls for onboarding, the agent MUST verify that the following 3 mandatory pieces of information have been provided by the user:
+1. **Candidate Full Name** (e.g., "Vanssh Agarrwal" or "John Doe")
+2. **Target Role** (e.g., "SDE", "Backend Engineer", "Intern")
+3. **GitHub Username** (e.g., "code-1705" or "AlgorithmNodes")
+
+> [!IMPORTANT]
+> **Strict Guardrail:** If the GitHub username (or any mandatory field) is missing from the user's prompt (e.g., *"onboard Vanssh as SDE"* without GitHub), **DO NOT guess, assume, or hallucinate a GitHub handle**.
+> The agent MUST pause and directly ask the user:
+> *"Please provide the candidate's GitHub username so I can configure repository permissions and organization invitations."*
+
+---
+
+## 4. Role-to-Access Matrix
 
 ### A. Senior SDE / SDE (Software Development Engineer)
 * **Corporate Email:** Provision official email `<firstname>@vansshagarrwal.in` (e.g. `vanssh@vansshagarrwal.in`).
