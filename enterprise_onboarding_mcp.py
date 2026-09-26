@@ -64,12 +64,22 @@ def create_zoho_company_email(full_name: str, domain: str = "vansshagarrwal.in")
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
+    import secrets, string
+    digits = "".join(secrets.choice(string.digits) for _ in range(4))
+    temp_password = f"Resolvee@{digits}#2026!"
+    
+    PROVISIONING_STATE[clean_name]["temporary_password"] = temp_password
+    PROVISIONING_STATE[clean_name]["login_portal"] = "https://mail.zoho.in"
+
     return json.dumps({
         "status": "SUCCESS",
         "company_email": company_email,
+        "temporary_password": temp_password,
+        "login_url": "https://mail.zoho.in",
         "mailbox_status": "ACTIVE",
         "allocated_storage": "10 GB",
-        "message": f"Corporate Zoho mailbox successfully provisioned for {full_name} ({company_email})."
+        "force_password_change_on_first_login": True,
+        "message": f"Corporate Zoho mailbox provisioned for {full_name}. Temporary Password: {temp_password}"
     }, indent=2)
 
 
@@ -140,9 +150,15 @@ def save_employee_to_mongodb(
     Persists the final verified employee onboarding record into MongoDB Atlas collection 'employee'.
     """
     mongo_uri = ENV.get("mongodb", "mongodb://localhost:27017")
+    clean_name = name.lower().strip().replace(" ", ".")
+    state_info = PROVISIONING_STATE.get(clean_name, {})
+    temp_pwd = state_info.get("temporary_password", "Resolvee@8892#2026!")
+
     record = {
         "name": name,
         "email": email,
+        "temporary_password": temp_pwd,
+        "login_portal": "https://mail.zoho.in",
         "github_username": github_username,
         "organization": "ResolveeAI",
         "role": role,
@@ -188,6 +204,10 @@ def send_welcome_email(
     zoho_password = ENV.get("zoho_password", "")
     
     subject = f"Welcome to ResolveeAI, {employee_name}! Your Day-1 Access Bundle"
+    clean_name = employee_name.lower().strip().replace(" ", ".")
+    state_info = PROVISIONING_STATE.get(clean_name, {})
+    temp_pwd = state_info.get("temporary_password", "Resolvee@8892#2026!")
+
     body = f"""Hello {employee_name},
 
 Welcome to ResolveeAI! Your developer environment and credentials have been verified by our Zero-Trust Onboarding Agent.
@@ -195,6 +215,8 @@ Welcome to ResolveeAI! Your developer environment and credentials have been veri
 Onboarding Summary:
 - Organization: ResolveeAI
 - Corporate Email: {to_email}
+- Corporate Webmail Login: https://mail.zoho.in
+- Temporary Password: {temp_pwd} (Please change upon initial login)
 - GitHub Access: ResolveeAI/backend_api (Write) | ResolveeAI/billing_core (Restricted)
 - Cloud IAM: ResolveeAI Dev Environment
 
@@ -240,6 +262,12 @@ ResolveeAI Engineering & DevOps Team
 
 
 if __name__ == "__main__":
+    from mcp.server.transport_security import TransportSecuritySettings
     port = int(os.environ.get("PORT", 8000))
     print(f"Starting ResolveeAI Onboarding MCP Server on port {port} (transport=sse)...")
-    app.run(transport="sse", port=port)
+    app.run(
+        transport="sse",
+        port=port,
+        host="0.0.0.0",
+        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False)
+    )
