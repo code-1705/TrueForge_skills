@@ -1,7 +1,7 @@
 """
-Enterprise Zero-Trust Onboarding MCP Server
-Handles Zoho Email generation, GitHub repo access, AWS IAM keys, 
-MongoDB employee persistence, and Welcome Email dispatch.
+ResolveeAI Zero-Trust Onboarding MCP Server
+Handles Zoho Email generation, GitHub repo access (ResolveeAI org), AWS IAM keys, 
+MongoDB Atlas employee persistence, and Welcome Email dispatch.
 """
 
 import os
@@ -14,16 +14,33 @@ from datetime import datetime, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any, Optional
+import ssl
 
 from mcp.server.mcpserver import MCPServer
 import pymongo
+import certifi
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("enterprise_onboarder_mcp")
+logger = logging.getLogger("resolveeai_onboarder_mcp")
+
+# Load .env
+def load_env():
+    env_file = "C:/Users/Vansh/Desktop/Trueforge/.env"
+    env = {}
+    if os.path.exists(env_file):
+        with open(env_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    env[k.strip()] = v.strip()
+    return env
+
+ENV = load_env()
 
 app = MCPServer(
     name="enterprise-onboarder",
-    description="Enterprise Employee Onboarding Tools (Zoho, GitHub, AWS, MongoDB, Email)"
+    description="ResolveeAI Developer Onboarding Tools (Zoho, GitHub, AWS, MongoDB, Email)"
 )
 
 # In-memory session state for audit
@@ -31,10 +48,10 @@ PROVISIONING_STATE: Dict[str, Dict[str, Any]] = {}
 
 
 @app.tool()
-def create_zoho_company_email(full_name: str, domain: str = "techcorp.dev") -> str:
+def create_zoho_company_email(full_name: str, domain: str = "vansshagarrwal.in") -> str:
     """
     Creates or registers an official corporate email address for the onboarding employee.
-    Example: 'vanssh' -> 'vanssh@techcorp.dev'
+    Example: 'vanssh' -> 'vanssh@vansshagarrwal.in'
     """
     clean_name = full_name.lower().strip().replace(" ", ".")
     company_email = f"{clean_name}@{domain}"
@@ -42,6 +59,7 @@ def create_zoho_company_email(full_name: str, domain: str = "techcorp.dev") -> s
     PROVISIONING_STATE[clean_name] = {
         "name": full_name,
         "email": company_email,
+        "domain": domain,
         "status": "EMAIL_CREATED",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -51,36 +69,37 @@ def create_zoho_company_email(full_name: str, domain: str = "techcorp.dev") -> s
         "company_email": company_email,
         "mailbox_status": "ACTIVE",
         "allocated_storage": "10 GB",
-        "message": f"Corporate Zoho mailbox successfully provisioned for {full_name}."
+        "message": f"Corporate Zoho mailbox successfully provisioned for {full_name} ({company_email})."
     }, indent=2)
 
 
 @app.tool()
-def provision_github_repository_access(github_username: str, role: str) -> str:
+def provision_github_repository_access(github_username: str, role: str = "SDE") -> str:
     """
-    Evaluates role policies and issues repository collaborator invitations to the developer's GitHub account.
+    Evaluates ResolveeAI corporate role policies and issues repository permissions.
     """
-    logger.info(f"Provisioning GitHub access for {github_username} as {role}")
+    logger.info(f"Evaluating ResolveeAI GitHub access for {github_username} as {role}")
     
     role_norm = role.upper()
     if "SDE" in role_norm or "BACKEND" in role_norm:
         allowed_repos = [
-            {"repo": "org/backend-api", "permission": "write"},
-            {"repo": "org/auth-service", "permission": "write"},
-            {"repo": "org/infrastructure-manifests", "permission": "read"}
+            {"repo": "ResolveeAI/backend_api", "permission": "write", "action": "Collaborator invite ready"}
         ]
         restricted_repos = [
-            {"repo": "org/billing-core", "reason": "Requires VP Finance Override"},
-            {"repo": "org/production-secrets", "reason": "Strict Least Privilege Guardrail"}
+            {"repo": "ResolveeAI/billing_core", "status": "BLOCKED", "reason": "Requires VP Finance Override"}
         ]
     else:
-        allowed_repos = [{"repo": "org/docs", "permission": "read"}]
-        restricted_repos = [{"repo": "org/*", "reason": "Role restricted"}]
+        allowed_repos = [
+            {"repo": "ResolveeAI/backend_api", "permission": "read", "action": "Read-only access"}
+        ]
+        restricted_repos = [
+            {"repo": "ResolveeAI/billing_core", "status": "BLOCKED", "reason": "Restricted to senior finance"}
+        ]
 
     return json.dumps({
+        "organization": "ResolveeAI",
         "github_user": github_username,
         "role": role,
-        "invitations_sent": [r["repo"] for r in allowed_repos],
         "assigned_permissions": allowed_repos,
         "blocked_repositories": restricted_repos,
         "verification_status": "READY_FOR_SANDBOX_CONFIRMATION"
@@ -88,22 +107,23 @@ def provision_github_repository_access(github_username: str, role: str) -> str:
 
 
 @app.tool()
-def provision_aws_cloud_keys(developer_name: str, role: str) -> str:
+def provision_aws_cloud_keys(developer_name: str, role: str = "SDE") -> str:
     """
-    Generates scoped developer AWS credentials (Access Key ID & Secret) for dev environments.
+    Generates scoped developer AWS credentials (Access Key ID & Secret) for ResolveeAI dev environments.
     """
     key_suffix = uuid.uuid4().hex[:12].upper()
     access_key = f"AKIA{key_suffix}"
     secret_key = uuid.uuid4().hex + uuid.uuid4().hex[:8]
 
     return json.dumps({
+        "organization": "ResolveeAI",
         "developer_name": developer_name,
         "role": role,
         "aws_access_key_id": access_key,
         "aws_secret_access_key": secret_key,
-        "allowed_buckets": ["s3://company-dev-assets", "s3://staging-build-artifacts"],
-        "blocked_buckets": ["s3://production-billing", "s3://prod-customer-vault"],
-        "assigned_policy": "AmazonS3DevDeveloperPolicy",
+        "allowed_buckets": ["s3://resolveeai-dev-assets", "s3://staging-build-artifacts"],
+        "blocked_buckets": ["s3://resolveeai-prod-billing", "s3://prod-customer-vault"],
+        "assigned_policy": "ResolveeAIDevDeveloperPolicy",
         "monthly_seat_cost_usd": 45.00
     }, indent=2)
 
@@ -113,17 +133,18 @@ def save_employee_to_mongodb(
     name: str,
     email: str,
     github_username: str,
-    role: str,
-    permissions_summary: str,
-    mongo_uri: str = "mongodb://localhost:27017"
+    role: str = "SDE",
+    permissions_summary: str = "write to ResolveeAI/backend_api, read-only to billing_core"
 ) -> str:
     """
-    Persists the final verified employee onboarding record into MongoDB in collection 'employee'.
+    Persists the final verified employee onboarding record into MongoDB Atlas collection 'employee'.
     """
+    mongo_uri = ENV.get("mongodb", "mongodb://localhost:27017")
     record = {
         "name": name,
         "email": email,
         "github_username": github_username,
+        "organization": "ResolveeAI",
         "role": role,
         "status": "ACTIVE_ONBOARDED",
         "permissions_summary": permissions_summary,
@@ -132,7 +153,7 @@ def save_employee_to_mongodb(
     }
     
     try:
-        client = pymongo.MongoClient(mongo_uri, serverSelectionTimeoutMS=2000)
+        client = pymongo.MongoClient(mongo_uri, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=4000)
         db = client["company_db"]
         collection = db["employee"]
         insert_result = collection.insert_one(record)
@@ -140,16 +161,16 @@ def save_employee_to_mongodb(
         client.close()
         return json.dumps({
             "status": "SUCCESS",
-            "message": "Employee successfully saved to MongoDB collection 'employee'.",
+            "message": "Employee record successfully inserted into MongoDB Atlas collection 'employee'.",
             "inserted_id": record["_id"],
             "data": record
         }, indent=2)
     except Exception as e:
-        logger.warning(f"MongoDB local connection skipped ({e}). Returning saved audit record.")
-        record["_id"] = "offline-audit-" + uuid.uuid4().hex[:8]
+        logger.error(f"MongoDB write failed: {e}")
+        record["_id"] = "offline-" + uuid.uuid4().hex[:8]
         return json.dumps({
-            "status": "SUCCESS (AUDIT_FALLBACK)",
-            "message": f"Record formatted for MongoDB 'employee' collection: {e}",
+            "status": "SAVED_LOCALLY",
+            "error": str(e),
             "data": record
         }, indent=2)
 
@@ -158,64 +179,67 @@ def save_employee_to_mongodb(
 def send_welcome_email(
     to_email: str,
     employee_name: str,
-    credentials_summary: str,
-    smtp_host: str = "",
-    smtp_port: int = 465,
-    sender_email: str = "",
-    sender_password: str = ""
+    credentials_summary: str
 ) -> str:
     """
-    Dispatches the official Day-1 onboarding package and instructions to the employee's company email.
+    Dispatches the official Day-1 onboarding package to the employee's company email via Zoho SMTP.
     """
-    subject = f"Welcome to the Team, {employee_name}! Your Day-1 Access Bundle"
+    admin_email = ENV.get("admin_mail", "hi@vansshagarrwal.in")
+    zoho_password = ENV.get("zoho_password", "")
+    
+    subject = f"Welcome to ResolveeAI, {employee_name}! Your Day-1 Access Bundle"
     body = f"""Hello {employee_name},
 
-Welcome to the company! Your developer profile has been securely provisioned and verified by our Zero-Trust Onboarding Agent.
+Welcome to ResolveeAI! Your developer environment and credentials have been verified by our Zero-Trust Onboarding Agent.
 
-Here are your onboarding details:
+Onboarding Summary:
+- Organization: ResolveeAI
+- Corporate Email: {to_email}
+- GitHub Access: ResolveeAI/backend_api (Write) | ResolveeAI/billing_core (Restricted)
+- Cloud IAM: ResolveeAI Dev Environment
+
+Credentials & Setup Details:
 {credentials_summary}
 
 Next Steps:
-1. Accept your GitHub repository invitations.
-2. Configure your local AWS developer profile.
+1. Accept your invitation to ResolveeAI on GitHub (github.com/ResolveeAI).
+2. Clone ResolveeAI/backend_api and run the local setup.
 3. Review our engineering runbook.
 
 Best regards,
-Engineering & DevOps Team
+ResolveeAI Engineering & DevOps Team
 """
-    # If real SMTP is provided
-    if smtp_host and sender_email and sender_password:
-        try:
-            msg = MIMEMultipart()
-            msg["From"] = sender_email
-            msg["To"] = to_email
-            msg["Subject"] = subject
-            msg.attach(MIMEText(body, "plain"))
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = admin_email
+        msg["To"] = to_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain"))
 
-            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=5) as server:
-                server.login(sender_email, sender_password)
-                server.send_message(msg)
-            
-            return json.dumps({
-                "status": "DISPATCHED",
-                "recipient": to_email,
-                "subject": subject,
-                "transport": "SMTP_SSL"
-            }, indent=2)
-        except Exception as e:
-            logger.error(f"Failed to send email via SMTP: {e}")
-
-    # Fallback / Simulated Dispatch Confirmation
-    return json.dumps({
-        "status": "DISPATCHED",
-        "recipient": to_email,
-        "subject": subject,
-        "body_preview": body[:200] + "...",
-        "message": f"Official welcome email successfully sent to {to_email}."
-    }, indent=2)
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL("smtp.zoho.in", 465, context=context, timeout=8) as server:
+            server.login(admin_email, zoho_password)
+            server.send_message(msg)
+        
+        return json.dumps({
+            "status": "SUCCESS",
+            "message": f"Official welcome email successfully sent to {to_email} via Zoho SMTP (smtp.zoho.in:465).",
+            "sender": admin_email,
+            "recipient": to_email,
+            "subject": subject
+        }, indent=2)
+    except Exception as e:
+        logger.error(f"Failed sending email via Zoho SMTP: {e}")
+        return json.dumps({
+            "status": "SIMULATED_DISPATCH",
+            "error": str(e),
+            "recipient": to_email,
+            "subject": subject,
+            "preview": body[:250] + "..."
+        }, indent=2)
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    print(f"Starting Enterprise Onboarding MCP Server on port {port} (transport=sse)...")
+    print(f"Starting ResolveeAI Onboarding MCP Server on port {port} (transport=sse)...")
     app.run(transport="sse", port=port)
