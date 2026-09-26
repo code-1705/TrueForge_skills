@@ -23,17 +23,23 @@ import certifi
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("resolveeai_onboarder_mcp")
 
-# Load .env
+# Load .env dynamically (Local .env file or system environment variables)
 def load_env():
-    env_file = "C:/Users/Vansh/Desktop/Trueforge/.env"
-    env = {}
-    if os.path.exists(env_file):
-        with open(env_file, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    k, v = line.split("=", 1)
-                    env[k.strip()] = v.strip()
+    env = dict(os.environ)
+    possible_paths = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
+        ".env",
+        "C:/Users/Vansh/Desktop/Trueforge/.env"
+    ]
+    for env_file in possible_paths:
+        if os.path.exists(env_file):
+            with open(env_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        env[k.strip()] = v.strip()
+            break
     return env
 
 ENV = load_env()
