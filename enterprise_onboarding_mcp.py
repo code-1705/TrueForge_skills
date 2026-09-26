@@ -86,32 +86,78 @@ def create_zoho_company_email(full_name: str, domain: str = "vansshagarrwal.in")
 @app.tool()
 def provision_github_repository_access(github_username: str, role: str = "SDE") -> str:
     """
-    Evaluates ResolveeAI corporate role policies and issues repository permissions.
+    Evaluates ResolveeAI corporate role policies and issues real GitHub invitations (Org & Repo).
     """
-    logger.info(f"Evaluating ResolveeAI GitHub access for {github_username} as {role}")
+    import requests
+    logger.info(f"Issuing real ResolveeAI GitHub access for {github_username} as {role}")
     
+    pat = ENV.get("pat", "").strip()
+    headers = {
+        "Authorization": f"Bearer {pat}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+
     role_norm = role.upper()
-    if "SDE" in role_norm or "BACKEND" in role_norm:
-        allowed_repos = [
-            {"repo": "ResolveeAI/backend_api", "permission": "write", "action": "Collaborator invite ready"}
-        ]
-        restricted_repos = [
-            {"repo": "ResolveeAI/billing_core", "status": "BLOCKED", "reason": "Requires VP Finance Override"}
-        ]
-    else:
-        allowed_repos = [
-            {"repo": "ResolveeAI/backend_api", "permission": "read", "action": "Read-only access"}
-        ]
-        restricted_repos = [
-            {"repo": "ResolveeAI/billing_core", "status": "BLOCKED", "reason": "Restricted to senior finance"}
-        ]
+    permission = "push" if ("SDE" in role_norm or "BACKEND" in role_norm) else "pull"
+    
+    repo_invite_status = "PENDING"
+    org_invite_status = "PENDING"
+    
+    try:
+        # 1. Invite as Collaborator to ResolveeAI/backend_api
+        repo_res = requests.put(
+            f"https://api.github.com/repos/ResolveeAI/backend_api/collaborators/{github_username}",
+            headers=headers,
+            json={"permission": permission},
+            timeout=8
+        )
+        if repo_res.status_code in [201, 204]:
+            repo_invite_status = "INVITATION_SENT"
+        else:
+            repo_invite_status = f"HTTP_{repo_res.status_code}: {repo_res.text[:120]}"
+
+        # 2. Invite to ResolveeAI Organization membership
+        org_res = requests.put(
+            f"https://api.github.com/orgs/ResolveeAI/memberships/{github_username}",
+            headers=headers,
+            json={"role": "member"},
+            timeout=8
+        )
+        if org_res.status_code in [200, 201]:
+            org_invite_status = "INVITATION_SENT"
+        else:
+            org_invite_status = f"HTTP_{org_res.status_code}: {org_res.text[:120]}"
+            
+    except Exception as e:
+        logger.error(f"GitHub API invitation failed: {e}")
+        repo_invite_status = f"ERROR: {str(e)}"
+        org_invite_status = f"ERROR: {str(e)}"
 
     return json.dumps({
         "organization": "ResolveeAI",
         "github_user": github_username,
         "role": role,
-        "assigned_permissions": allowed_repos,
-        "blocked_repositories": restricted_repos,
+        "organization_invitation": {
+            "status": org_invite_status,
+            "accept_url": "https://github.com/ResolveeAI",
+            "instructions": f"User @{github_username} must visit https://github.com/ResolveeAI to click 'Accept Invitation'."
+        },
+        "assigned_permissions": [
+            {
+                "repo": "ResolveeAI/backend_api",
+                "permission": "write" if permission == "push" else "read-only",
+                "status": repo_invite_status,
+                "accept_url": "https://github.com/ResolveeAI/backend_api/invitations"
+            }
+        ],
+        "blocked_repositories": [
+            {
+                "repo": "ResolveeAI/billing_core",
+                "status": "BLOCKED",
+                "reason": "Restricted by ResolveeAI Least-Privilege Zero-Trust RBAC"
+            }
+        ],
         "verification_status": "READY_FOR_SANDBOX_CONFIRMATION"
     }, indent=2)
 
@@ -169,7 +215,7 @@ def save_employee_to_mongodb(
     }
     
     try:
-        client = pymongo.MongoClient(mongo_uri, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=4000)
+        client = pymongo.MongoClient(mongo_uri, tls=True, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=10000)
         db = client["company_db"]
         collection = db["employee"]
         insert_result = collection.insert_one(record)
