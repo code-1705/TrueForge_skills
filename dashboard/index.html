@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Super Admin Lifecycle Dashboard | ResolveeAI Operations Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- TOP BANNER / OPERATIONS CONSOLE EYEBROW -->
+  <div class="console-header">
+    <div class="console-inner">
+      <div class="console-left">
+        <span class="console-badge">RESOLVEE OPERATIONS CONSOLE</span>
+        <span class="console-divider">•</span>
+        <span class="console-sub">Autonomous Zero-Trust Lifecycle Manager</span>
+      </div>
+      <div class="console-right">
+        <div class="agent-live-tag">
+          <span class="live-dot"></span>
+          <span>TRUEFORGE AGENT: ONLINE (PORT 8000 MCP)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-container">
+    <!-- DASHBOARD TITLE & ACTIONS -->
+    <div class="dashboard-header">
+      <div>
+        <h1 class="page-title">Super Admin Lifecycle Dashboard</h1>
+        <p class="page-subtitle">Real-time enterprise identity provisioning, Daytona sandbox isolation & zero-residual offboarding pipeline</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" id="refreshBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          REFRESH
+        </button>
+        <button class="btn btn-dark" id="openChatBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          ⚡ CHAT WITH TRUEFORGE AGENT
+        </button>
+      </div>
+    </div>
+
+    <!-- SECTION 1: TOP KPI LIVE METRIC CARDS (OpenIntervue Style with Left Accent Strips) -->
+    <div class="section-label">LIVE DATA METRICS</div>
+    <div class="kpi-grid">
+      <!-- Card 1: Total Identities (Blue Strip) -->
+      <div class="kpi-card accent-blue">
+        <div class="kpi-strip"></div>
+        <div class="kpi-content">
+          <div class="kpi-eyebrow">TOTAL MANAGED IDENTITIES</div>
+          <div class="kpi-value blue-text" id="statTotal">--</div>
+          <div class="kpi-footer-pill">MongoDB Atlas <code>company_db.employee</code></div>
+        </div>
+      </div>
+
+      <!-- Card 2: Active Access (Emerald Green Strip) -->
+      <div class="kpi-card accent-green">
+        <div class="kpi-strip"></div>
+        <div class="kpi-content">
+          <div class="kpi-eyebrow">ACTIVE ZERO-TRUST ACCESS</div>
+          <div class="kpi-value green-text" id="statActive">--</div>
+          <div class="kpi-footer-pill">GitHub RBAC & Scoped AWS IAM</div>
+        </div>
+      </div>
+
+      <!-- Card 3: Revoked / Offboarded (Rose Strip) -->
+      <div class="kpi-card accent-rose">
+        <div class="kpi-strip"></div>
+        <div class="kpi-content">
+          <div class="kpi-eyebrow">OFFBOARDED & REVOKED</div>
+          <div class="kpi-value rose-text" id="statOffboarded">--</div>
+          <div class="kpi-footer-pill">Zero-residual credentials</div>
+        </div>
+      </div>
+
+      <!-- Card 4: Daytona Sandbox Health (Cyan Strip) -->
+      <div class="kpi-card accent-cyan">
+        <div class="kpi-strip"></div>
+        <div class="kpi-content">
+          <div class="kpi-eyebrow">DAYTONA ISOLATION HEALTH</div>
+          <div class="kpi-value cyan-text" id="statHealth">100%</div>
+          <div class="kpi-footer-pill">Sandboxes verified pre-flight</div>
+        </div>
+      </div>
+
+      <!-- Card 5: Policy Adherence (Amber Strip) -->
+      <div class="kpi-card accent-amber">
+        <div class="kpi-strip"></div>
+        <div class="kpi-content">
+          <div class="kpi-eyebrow">POLICY COMPLIANCE</div>
+          <div class="kpi-value amber-text">ENFORCED</div>
+          <div class="kpi-footer-pill">Zero-Trust SKILL.md rules</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: LIFECYCLE PIPELINE CARDS (Process, Invited, Scheduled, Active, Offboarded) -->
+    <div class="panel-card" style="margin-top: 24px;">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Current Lifecycle Pipeline</h2>
+          <span class="panel-subtitle">Identity states across Zoho Mail, GitHub, AWS IAM & Daytona</span>
+        </div>
+      </div>
+
+      <div class="pipeline-grid">
+        <div class="pipeline-card">
+          <span class="pipeline-label">INVITED / NEW</span>
+          <div class="pipeline-count" id="pipeInvited">0</div>
+          <div class="pipeline-pill">Awaiting agent start</div>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-label">ZOHO PROVISIONED</span>
+          <div class="pipeline-count blue-text" id="pipeZoho">1</div>
+          <div class="pipeline-pill">@vansshagarrwal.in</div>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-label">DAYTONA TESTED</span>
+          <div class="pipeline-count cyan-text" id="pipeDaytona">1</div>
+          <div class="pipeline-pill">Isolation confirmed</div>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-label">ACTIVE PROVISIONED</span>
+          <div class="pipeline-count green-text" id="pipeActive">0</div>
+          <div class="pipeline-pill">Live repository access</div>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-label">OFFBOARDING REQUESTED</span>
+          <div class="pipeline-count amber-text" id="pipePendingOffboard">0</div>
+          <div class="pipeline-pill">Disambiguation check</div>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-label">FULLY REVOKED</span>
+          <div class="pipeline-count rose-text" id="pipeRevoked">1</div>
+          <div class="pipeline-pill">Audit certificate sent</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: RECRUITER & EMPLOYEE TRACKER TABLE (OpenIntervue Table Design) -->
+    <div class="panel-card" style="margin-top: 24px;">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Employee Identity Tracker</h2>
+          <span class="panel-subtitle">Filters: name, role, email, status, permissions</span>
+        </div>
+      </div>
+
+      <!-- FILTER CONTROLS BAR (OpenIntervue Style) -->
+      <div class="filter-bar">
+        <div class="filter-item search-box">
+          <input type="text" id="searchInput" placeholder="Search by name, role, email, GitHub..." />
+        </div>
+        <div class="filter-item">
+          <select id="roleFilter">
+            <option value="all">ALL ROLES</option>
+            <option value="SDE">SDE</option>
+            <option value="SDE Intern">SDE INTERN</option>
+            <option value="DevOps">DEVOPS</option>
+            <option value="Product Manager">PRODUCT MANAGER</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <select id="statusFilter">
+            <option value="all">ALL STATUSES</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="OFFBOARDED">OFFBOARDED</option>
+          </select>
+        </div>
+        <button class="btn btn-dark btn-apply" id="applyFiltersBtn">APPLY FILTERS</button>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-wrapper">
+        <table class="saas-table">
+          <thead>
+            <tr>
+              <th>EMPLOYEE</th>
+              <th>CORPORATE EMAIL</th>
+              <th>DESIGNATED ROLE</th>
+              <th>GITHUB ACCESS</th>
+              <th>AWS IAM USER</th>
+              <th>STATUS</th>
+              <th style="text-align: right;">ACTION</th>
+            </tr>
+          </thead>
+          <tbody id="employeeTableBody">
+            <tr>
+              <td colspan="7" class="empty-state">Loading records from MongoDB Atlas...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SECTION 4: SYSTEM AUDIT LOGS & INTEGRATION ARCHITECTURE (Side-by-side or stacked) -->
+    <div class="bottom-grid" style="margin-top: 24px;">
+      <!-- System Audit Logs Table -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">System Audit Logs</h2>
+            <span class="panel-subtitle">Cryptographically verified zero-trust lifecycle events</span>
+          </div>
+          <span class="live-badge">IMMUTABLE</span>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="saas-table audit-table">
+            <thead>
+              <tr>
+                <th>TIMESTAMP</th>
+                <th>ACTION TYPE</th>
+                <th>TARGET IDENTITY</th>
+                <th>POLICY VERIFICATION</th>
+                <th>STATUS</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <!-- Populated in JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Ecosystem Status Panel -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Connected Services Architecture</h2>
+            <span class="panel-subtitle">Zero-Trust perimeter integrations</span>
+          </div>
+        </div>
+
+        <div class="eco-list">
+          <div class="eco-item">
+            <div class="eco-info">
+              <strong>Zoho Mail OAuth2 API</strong>
+              <span>Organization: 60082977634 (@vansshagarrwal.in)</span>
+            </div>
+            <span class="badge badge-green">CONNECTED</span>
+          </div>
+          <div class="eco-item">
+            <div class="eco-info">
+              <strong>GitHub REST API</strong>
+              <span>Organization: ResolveeAI (backend_api write / billing_core 403)</span>
+            </div>
+            <span class="badge badge-green">CONNECTED</span>
+          </div>
+          <div class="eco-item">
+            <div class="eco-info">
+              <strong>AWS IAM Engine</strong>
+              <span>Least-Privilege Scoped Roles & Out-of-band Delivery</span>
+            </div>
+            <span class="badge badge-green">CONNECTED</span>
+          </div>
+          <div class="eco-item">
+            <div class="eco-info">
+              <strong>Daytona Sandboxes</strong>
+              <span>Pre-flight Isolation & Authorization Prober</span>
+            </div>
+            <span class="badge badge-green">CONNECTED</span>
+          </div>
+          <div class="eco-item">
+            <div class="eco-info">
+              <strong>MongoDB Atlas SRV</strong>
+              <span>company_db.employee (SSL Validated)</span>
+            </div>
+            <span class="badge badge-green">CONNECTED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING MODAL -->
+  <div class="modal-overlay" id="onboardModal">
+    <div class="modal-card">
+      <div class="modal-top">
+        <div>
+          <h2 class="modal-title">Provision New Employee</h2>
+          <p class="modal-desc">TrueForge autonomous agent provisions credentials across Zoho, GitHub, AWS, and Daytona</p>
+        </div>
+        <button class="close-x" id="closeOnboardModal">&times;</button>
+      </div>
+
+      <form id="onboardForm">
+        <div class="modal-form-grid">
+          <div class="form-field">
+            <label>FULL NAME *</label>
+            <input type="text" id="empName" placeholder="e.g. Vanssh Agarwal" required />
+          </div>
+          <div class="form-field">
+            <label>ROLE & PERMISSIONS *</label>
+            <select id="empRole" required>
+              <option value="SDE">Software Development Engineer (SDE)</option>
+              <option value="SDE Intern">SDE Intern (Restricted Read-Only)</option>
+              <option value="DevOps">DevOps Engineer (Infra & Deploy)</option>
+              <option value="Product Manager">Product Manager (Planning & Docs)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>GITHUB USERNAME *</label>
+            <input type="text" id="empGithub" placeholder="e.g. code-1705" required />
+          </div>
+          <div class="form-field">
+            <label>PERSONAL DELIVERY EMAIL *</label>
+            <input type="email" id="empEmail" placeholder="e.g. vansh@personal.com" required />
+            <span class="field-help">One-time AWS key & temp password sent out-of-band</span>
+          </div>
+        </div>
+
+        <!-- POLICY BOX -->
+        <div class="policy-note">
+          <div class="policy-note-title">ZERO-TRUST ENFORCEMENT PROTOCOL</div>
+          <p>The candidate is granted access strictly to <code>backend_api</code>. Access to <code>billing_core</code> is blocked with HTTP 403. AWS Secret Access Key is masked and never displayed in dashboard.</p>
+        </div>
+
+        <!-- PROGRESS STEPPER -->
+        <div class="stepper-wrap hidden" id="stepperWrap">
+          <div class="step-row" id="st1"><span class="step-num">1</span> Creating corporate email on Zoho Mail API...</div>
+          <div class="step-row" id="st2"><span class="step-num">2</span> Applying GitHub collaborator RBAC on ResolveeAI...</div>
+          <div class="step-row" id="st3"><span class="step-num">3</span> Issuing scoped IAM keys via AWS engine...</div>
+          <div class="step-row" id="st4"><span class="step-num">4</span> Running Daytona sandbox isolation validation...</div>
+          <div class="step-row" id="st5"><span class="step-num">5</span> Committing encrypted profile to MongoDB Atlas...</div>
+          <div class="step-row" id="st6"><span class="step-num">6</span> Dispatching welcome email with private credentials...</div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancelOnboardBtn">CANCEL</button>
+          <button type="submit" class="btn btn-dark" id="submitOnboardBtn">EXECUTE PROVISIONING</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- OFFBOARDING MODAL -->
+  <div class="modal-overlay" id="offboardModal">
+    <div class="modal-card">
+      <div class="modal-top">
+        <div>
+          <h2 class="modal-title" style="color: #E11D48;">Zero-Trust Offboarding Confirmation</h2>
+          <p class="modal-desc">TrueForge disambiguation guard verified employee identity record</p>
+        </div>
+        <button class="close-x" id="closeOffboardModal">&times;</button>
+      </div>
+
+      <div class="offboard-body">
+        <div class="alert-box-rose">
+          ⚠️ <strong>Irreversible Operation:</strong> All access credentials and mailboxes will be permanently revoked and suspended.
+        </div>
+
+        <div class="target-card" id="offboardTargetDetails">
+          <!-- Populated in JS -->
+        </div>
+
+        <div class="revocation-steps">
+          <div class="rev-item">✕ Invalidate GitHub organization membership & repository collaborator access</div>
+          <div class="rev-item">✕ Terminate AWS IAM developer user and delete secret access keys</div>
+          <div class="rev-item">✕ Lock and suspend Zoho corporate mailbox login</div>
+          <div class="rev-item">✕ Update MongoDB Atlas status to <code>OFFBOARDED</code> with audit timestamp</div>
+          <div class="rev-item">✕ Dispatch offboarding audit certificate to administrative mailbox</div>
+        </div>
+
+        <div class="form-field" style="margin-top: 16px;">
+          <label>EXIT REASON</label>
+          <input type="text" id="exitReason" value="Employee exit / contract end" />
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="cancelOffboardBtn">CANCEL</button>
+        <button type="button" class="btn btn-rose" id="confirmOffboardBtn">CONFIRM FULL OFFBOARDING</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUDIT DETAIL MODAL -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-card">
+      <div class="modal-top">
+        <div>
+          <h2 class="modal-title" id="detailName">Employee Details</h2>
+          <p class="modal-desc" id="detailEmail">email@vansshagarrwal.in</p>
+        </div>
+        <button class="close-x" id="closeDetailModal">&times;</button>
+      </div>
+
+      <div class="detail-body" id="detailContent">
+        <!-- Rendered in JS -->
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="closeDetailBtn">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+
+  <!-- FLOATING CHAT LAUNCHER BUTTON -->
+  <button class="chat-launcher" id="floatingChatBtn" title="Open TrueForge Conversational Agent">
+    <div class="launcher-beacon"></div>
+    <span class="launcher-icon">🤖</span>
+    <span class="launcher-text">TrueForge AI Agent</span>
+  </button>
+
+  <!-- SLIDE-OUT CONVERSATIONAL AGENT DRAWER -->
+  <div class="chat-drawer-overlay" id="chatDrawerOverlay">
+    <div class="chat-drawer" id="chatDrawer">
+      <div class="chat-header">
+        <div class="chat-title-group">
+          <div class="agent-avatar">🤖</div>
+          <div>
+            <h3>TrueForge Autonomous Agent</h3>
+            <span class="agent-sub">Conversational Zero-Trust Lifecycle Manager</span>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <span class="badge badge-green">LIVE AGENT</span>
+          <button class="close-drawer-btn" id="closeChatDrawerBtn">&times;</button>
+        </div>
+      </div>
+
+
+
+      <!-- MESSAGES STREAM -->
+      <div class="chat-messages" id="chatMessages">
+        <div class="msg msg-agent">
+          <div class="msg-avatar">🤖</div>
+          <div class="msg-bubble">
+            <p><strong>Hello! I am TrueForge, your autonomous lifecycle management agent.</strong></p>
+            <p style="margin-top: 6px;">You can speak with me naturally to onboard or offboard team members. I will autonomously verify zero-trust policies, enforce same-name disambiguation guards, and coordinate across:</p>
+            <ul style="margin: 8px 0 0 16px; font-size: 11px; line-height: 1.6;">
+              <li>Zoho Mail API (Corporate Inboxes)</li>
+              <li>GitHub REST API (Repository RBAC)</li>
+              <li>AWS IAM (Least-Privilege Scoped Keys)</li>
+              <li>Daytona Sandboxes (Pre-flight Isolation)</li>
+              <li>MongoDB Atlas (Encrypted Directory Records)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHAT INPUT AREA -->
+      <div class="chat-footer">
+        <form id="chatForm" class="chat-input-form">
+          <input 
+            type="text" 
+            id="chatInput" 
+            placeholder="Type a message (e.g. 'Onboard John as SDE with github: j-smith, email: john@gmail.com')..." 
+            autocomplete="off"
+          />
+          <button type="submit" class="btn btn-dark btn-send" id="sendChatBtn">
+            <span>SEND</span>
+          </button>
+        </form>
+        <span class="input-hint">Zero-trust policies, same-name disambiguation & secret masking active.</span>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

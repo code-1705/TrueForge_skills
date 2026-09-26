@@ -72,7 +72,7 @@ def create_zoho_company_email(full_name: str, domain: str = "vansshagarrwal.in")
     # Check MongoDB for collision
     try:
         mongo_uri = ENV.get("mongodb", "mongodb://localhost:27017")
-        c = pymongo.MongoClient(mongo_uri, tls=True, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=3000)
+        c = pymongo.MongoClient(mongo_uri, tls=True, tlsInsecure=True, retryWrites=True, serverSelectionTimeoutMS=5000)
         emp_col = c["company_db"]["employee"]
         counter = 1
         while emp_col.find_one({"email": company_email, "status": {"$ne": "OFFBOARDED"}}):
@@ -315,7 +315,7 @@ def save_employee_to_mongodb(
     }
     
     try:
-        client = pymongo.MongoClient(mongo_uri, tls=True, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=10000)
+        client = pymongo.MongoClient(mongo_uri, tls=True, tlsInsecure=True, retryWrites=True, serverSelectionTimeoutMS=5000)
         db = client["company_db"]
         collection = db["employee"]
         insert_result = collection.insert_one(record)
@@ -578,7 +578,7 @@ def offboard_employee_in_mongodb(
     offboard_time = datetime.now(timezone.utc).isoformat()
 
     try:
-        client = pymongo.MongoClient(mongo_uri, tls=True, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=10000)
+        client = pymongo.MongoClient(mongo_uri, tls=True, tlsInsecure=True, retryWrites=True, serverSelectionTimeoutMS=5000)
         db = client["company_db"]
         collection = db["employee"]
 
