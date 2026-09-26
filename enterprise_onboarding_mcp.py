@@ -57,8 +57,25 @@ def create_zoho_company_email(full_name: str, domain: str = "vansshagarrwal.in")
     import secrets
     import string
     
+    import pymongo
     clean_name = full_name.lower().strip().replace(" ", ".")
-    company_email = f"{clean_name}@{domain}"
+    base_email = f"{clean_name}@{domain}"
+    company_email = base_email
+    collision_detected = False
+
+    # Check MongoDB for collision
+    try:
+        mongo_uri = ENV.get("mongodb", "mongodb://localhost:27017")
+        c = pymongo.MongoClient(mongo_uri, tls=True, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=3000)
+        emp_col = c["company_db"]["employee"]
+        counter = 1
+        while emp_col.find_one({"email": company_email, "status": {"$ne": "OFFBOARDED"}}):
+            collision_detected = True
+            counter += 1
+            company_email = f"{clean_name}{counter}@{domain}"
+        c.close()
+    except Exception as e:
+        logger.warning(f"Could not check DB for email collision: {e}")
     
     # Generate secure temporary password
     digits = "".join(secrets.choice(string.digits) for _ in range(4))
@@ -562,23 +579,60 @@ def offboard_employee_in_mongodb(
             }
         }
 
-        result = collection.find_one_and_update(query, update, return_document=pymongo.ReturnDocument.AFTER)
-        client.close()
+        # Safeguard: Check for multiple matching active employees
+        active_matches = list(collection.find({
+            "$and": [
+                query,
+                {"status": {"$ne": "OFFBOARDED"}}
+            ]
+        }))
 
-        if result:
+        if len(active_matches) > 1:
+            candidates = []
+            for doc in active_matches:
+                candidates.append({
+                    "id": str(doc.get("_id")),
+                    "name": doc.get("name"),
+                    "email": doc.get("email"),
+                    "github_username": doc.get("github_username"),
+                    "role": doc.get("role"),
+                    "onboarded_at": doc.get("onboarded_at")
+                })
+            client.close()
+            return json.dumps({
+                "status": "AMBIGUOUS_NAME_COLLISION",
+                "error": f"Multiple active employees ({len(active_matches)}) matched '{identifier}'. Offboarding aborted to prevent accidental revocation.",
+                "candidates_found": candidates,
+                "required_action": "Zero-trust safety triggered. Please specify the exact corporate email or GitHub username to proceed."
+            }, indent=2)
+
+        elif len(active_matches) == 1:
+            target_id = active_matches[0]["_id"]
+            result = collection.find_one_and_update({"_id": target_id}, update, return_document=pymongo.ReturnDocument.AFTER)
+            client.close()
             result["_id"] = str(result["_id"])
             return json.dumps({
                 "status": "SUCCESS",
-                "message": f"Employee {result.get('name')} successfully updated to 'OFFBOARDED' in MongoDB Atlas.",
+                "message": f"Employee {result.get('name')} ({result.get('email')}) successfully updated to 'OFFBOARDED' in MongoDB Atlas.",
                 "record": result
             }, indent=2)
         else:
-            return json.dumps({
-                "status": "NOT_FOUND",
-                "message": f"No employee found matching identifier '{identifier}'. Created offboarding audit log entry.",
-                "offboarded_target": identifier,
-                "timestamp": offboard_time
-            }, indent=2)
+            # Check if matching person was already offboarded
+            past_match = collection.find_one(query)
+            client.close()
+            if past_match:
+                return json.dumps({
+                    "status": "ALREADY_OFFBOARDED",
+                    "message": f"Employee '{identifier}' was already offboarded on {past_match.get('offboarded_at')}.",
+                    "employee_email": past_match.get("email")
+                }, indent=2)
+            else:
+                return json.dumps({
+                    "status": "NOT_FOUND",
+                    "message": f"No employee found matching identifier '{identifier}'.",
+                    "offboarded_target": identifier,
+                    "timestamp": offboard_time
+                }, indent=2)
     except Exception as e:
         logger.error(f"MongoDB offboard update failed: {e}")
         return json.dumps({
