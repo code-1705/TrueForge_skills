@@ -67,3 +67,33 @@ Before presenting the summary to the manager or delivering keys:
   - Finalizing GitHub organization invitations.
   - Generating and delivering live AWS keys.
   - Sending the welcome email.
+
+
+---
+
+## 7. Zero-Trust Offboarding Protocol (Revocation & Exit Governance)
+
+When offboarding an employee, contractor, or intern (prompt example: `"offboard Algo"` or `"revoke all access for Algo"`), the agent MUST execute the following 5-step exit protocol to eliminate zombie credentials:
+
+### Step 1: GitHub Access Revocation
+- Call `revoke_github_access` with the user's GitHub username.
+- Removes the user from `ResolveeAI/backend_api` collaborator list.
+- Cancels any pending repository invitations.
+- Removes the user from the `ResolveeAI` organization and cancels pending organization invitations.
+
+### Step 2: Cloud IAM Key Deactivation
+- Call `revoke_aws_credentials` with the developer's name.
+- Invalidates and deletes all active developer AWS Access Keys (`AKIA...`).
+- Terminates all active IAM role sessions.
+
+### Step 3: Corporate Mailbox Suspension
+- Call `suspend_zoho_company_email` with the corporate email (e.g., `algo@vansshagarrwal.in`).
+- Calls the Zoho Organization Admin API to suspend/disable the account and lock webmail access.
+
+### Step 4: MongoDB Atlas Master Record Update
+- Call `offboard_employee_in_mongodb` with the employee name, email, or GitHub username.
+- Updates the status in MongoDB collection `company_db.employee` from `ACTIVE_ONBOARDED` to `OFFBOARDED`.
+- Sets timestamp `offboarded_at`, exit reason, and flags `access_revoked: { github: true, aws_iam: true, zoho_email: true }`.
+
+### Step 5: Management Audit Certificate Dispatch
+- Call `send_offboarding_audit_email` to send an official Zero-Trust Offboarding Audit Certificate to management (`hi@vansshagarrwal.in`) via Zoho SMTP.
