@@ -1,49 +1,69 @@
 ---
 name: zero-trust-onboarding-policy
-description: Corporate RBAC security policies, role-to-resource matrix, and sandbox verification criteria for onboarding new team members.
+description: ResolveeAI corporate RBAC security policies, role-to-resource matrix, and sandbox verification criteria for developer onboarding.
 ---
 
-# Enterprise Developer Onboarding Policy
+# ResolveeAI Developer Onboarding Policy
 
-This skill defines the mandatory role mappings, security boundaries, and verification procedures for developer onboarding.
-
-## 1. Role-to-Access Matrix
-
-### Senior Backend Engineer
-- **GitHub Repos:**
-  - `org/backend-api` (Permission: `write`)
-  - `org/auth-service` (Permission: `write`)
-  - `org/infrastructure` (Permission: `read`)
-  - `org/billing-core` (Permission: `read` only — NO write access without VP approval)
-- **Cloud / IAM (Azure / AWS):**
-  - Dev/Staging Kubernetes cluster namespace access
-  - Read access to Dev cloud storage buckets
-  - **FORBIDDEN:** Direct access to Production DB credentials or Production secrets.
-- **Estimated Seat Cost:** $85/month (GitHub Enterprise + AWS Dev IAM + Datadog dev seat).
-
-### Junior / Intern Engineer
-- **GitHub Repos:** Read/Triage on all service repos, Fork/PR workflow.
-- **Cloud:** Read-only access to Staging logs.
+This skill defines the mandatory role mappings, security boundaries, and zero-trust verification procedures for onboarding team members into **ResolveeAI**.
 
 ---
 
-## 2. Zero-Trust Verification Protocol (Sandbox Execution)
+## 1. Organization Information
+- **GitHub Organization:** `ResolveeAI`
+- **Primary Domain:** `vansshagarrwal.in`
+- **Official Admin Dispatch Email:** `hi@vansshagarrwal.in`
+- **Database System of Record:** MongoDB Atlas (`company_db.employee`)
 
-Before requesting manager approval or delivering credentials:
-1. **Spin up temporary sandbox execution environment.**
+---
+
+## 2. Role-to-Access Matrix
+
+### A. Senior SDE / SDE (Software Development Engineer)
+* **Corporate Email:** Provision official email `<firstname>@vansshagarrwal.in` (e.g. `vanssh@vansshagarrwal.in`).
+* **GitHub Repository Permissions (`ResolveeAI` Org):**
+  - **`ResolveeAI/backend_api`**: `write` (Push branches, create PRs, run CI).
+  - **`ResolveeAI/billing_core`**: **BLOCKED / READ-ONLY** (Strict Financial Security Boundary: SDEs must NEVER be granted write access to billing without written VP override).
+* **AWS Cloud Permissions:**
+  - Role: `ResolveeAIDevDeveloperRole`
+  - Allowed: Read/Write to Dev S3 buckets, staging CloudWatch logs, staging EKS/ECS namespaces.
+  - Strictly Forbidden: Production databases, production billing buckets, root account credentials.
+  - Estimated Monthly Infra & SaaS Cost: **$85/month**.
+* **Database HR Persistence:** Insert complete employee profile into MongoDB collection `employee`.
+* **Welcome Delivery:** Send Day-1 Welcome Bundle with repository links and AWS CLI setup to their company email.
+
+---
+
+### B. Junior SDE / Intern
+* **Corporate Email:** `<firstname>.intern@vansshagarrwal.in`
+* **GitHub Permissions:**
+  - `ResolveeAI/backend_api`: `read` (Fork & PR workflow only, no direct push).
+  - `ResolveeAI/billing_core`: `BLOCKED` (No access).
+* **AWS Permissions:** Read-only access to staging logs.
+* **Estimated Cost:** **$25/month**.
+
+---
+
+### C. DevOps / Infrastructure Engineer
+* **GitHub Permissions:** Admin on infrastructure manifests, `write` on backend services.
+* **AWS Permissions:** `DevOpsAdminRole` (Subject to mandatory multi-factor approval).
+
+---
+
+## 3. Zero-Trust Sandbox Verification Protocol
+
+Before presenting the summary to the manager or delivering keys:
+1. **Launch Daytona Sandbox** container.
 2. **Execute Canary Verification:**
-   - Test 1 (Positive Repo Check): Attempt to authenticate and read branches from `org/backend-api`.
-   - Test 2 (Negative Boundary Check): Attempt to write to `org/billing-core` — must receive `403 Forbidden` or permission denied.
-   - Test 3 (Cloud Token Check): Verify identity token against staging namespace.
-3. **Capture Evidence Matrix:** Return a clean PASS/FAIL report for each test.
-4. **Teardown Sandbox.**
+   - **Test 1 (Positive Access):** Authenticate against `ResolveeAI/backend_api` and confirm clone/read succeeds (`Exit Code 0`).
+   - **Test 2 (Negative Boundary):** Attempt to write to `ResolveeAI/billing_core` and assert that permission is denied (`HTTP 403 Forbidden`).
+   - **Test 3 (Cloud Token Test):** Validate generated AWS key against developer namespace.
+3. **Capture Raw Logs:** Return verification report with exit codes to the manager.
 
 ---
 
-## 3. Approval Gate Thresholds
-- **Human Approval is strictly REQUIRED** if:
-  - Any `write` access is provisioned.
-  - Any cloud IAM role is assigned.
-  - Estimated monthly cost exceeds $50/month.
-- **Immediate Rejection / Warning** if:
-  - Access to `production-*` resources is requested without explicit compliance tickets.
+## 4. Human Approval Gate
+* The agent **must pause** and require human manager approval (Allow / Deny) before:
+  - Finalizing GitHub organization invitations.
+  - Generating and delivering live AWS keys.
+  - Sending the welcome email.
